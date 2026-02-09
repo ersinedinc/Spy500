@@ -1,0 +1,80 @@
+tickers:
+  primary: "VUAA.AS"
+  fallback: "SPY"
+  min_rows_threshold: 100
+
+data:
+  hourly_period: "365d"
+  daily_period: "2y"
+  max_age_hours: 1
+  timezone: "Europe/Amsterdam"
+  store_timezone: "UTC"
+
+indicators:
+  rsi_period: 14
+  sma_periods: [20, 50, 200]
+  ema_periods: [20, 50]
+  macd_fast: 12
+  macd_slow: 26
+  macd_signal: 9
+  bb_period: 20
+  bb_std: 2
+  atr_period: 14
+  volatility_window: 20
+  trading_days_per_year: 252
+
+regime:
+  overbought_rsi: 70
+  oversold_rsi: 30
+  high_volatility_threshold: 0.30
+  extreme_drawdown_threshold: -0.10
+
+heat_score:
+  weights:
+    rsi: 0.15
+    macd_histogram: 0.10
+    bb_position: 0.10
+    ma_trend: 0.15
+    drawdown: 0.15
+    volatility: 0.10
+    momentum_5d: 0.10
+    distance_ma200: 0.15
+  normalization:
+    macd_clamp: [-2.0, 2.0]
+    ma_trend_range: [-0.10, 0.10]
+    drawdown_range: [-0.20, 0.0]
+    volatility_range: [0.40, 0.10]
+    momentum_range: [-0.05, 0.05]
+    distance_ma200_range: [-0.15, 0.15]
+  labels:
+    fear: [0, 30]
+    cooling: [30, 45]
+    neutral: [45, 65]
+    hot: [65, 100]
+
+dca:
+  base_amount: 500
+  currency: "EUR"
+  brackets:
+    - range: [0, 30]
+      multiplier: 2.0
+      label: "Aggressive Buy"
+    - range: [30, 45]
+      multiplier: 1.25
+      label: "Moderate Buy"
+    - range: [45, 65]
+      multiplier: 1.0
+      label: "Normal DCA"
+    - range: [65, 80]
+      multiplier: 0.75
+      label: "Reduce"
+    - range: [80, 100]
+      multiplier: 0.5
+      label: "Minimal"
+
+api:
+  cors_origins:
+    - "http://localhost:5173"
+    - "http://127.0.0.1:5173"
+  host: "0.0.0.0"
+  port: 8000

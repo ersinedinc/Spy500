@@ -3,6 +3,12 @@ tickers:
   fallback: "SPY"
   min_rows_threshold: 100
 
+etfs:
+  - symbol: "SPY"
+    name: "S&P 500 (SPY)"
+  - symbol: "SXRF.DE"
+    name: "Nasdaq 100 (SXRF)"
+
 data:
   hourly_period: "365d"
   daily_period: "2y"

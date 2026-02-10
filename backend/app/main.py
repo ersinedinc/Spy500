@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_config
 from app.services.orchestrator import initialize
-from app.routers import health, heat_score, indicators, regime, action_plan, report
+from app.routers import health, heat_score, indicators, regime, action_plan, report, tickers
 
 logging.basicConfig(
     level=logging.INFO,
@@ -45,3 +45,4 @@ app.include_router(indicators.router, prefix="/api")
 app.include_router(regime.router, prefix="/api")
 app.include_router(action_plan.router, prefix="/api")
 app.include_router(report.router, prefix="/api")
+app.include_router(tickers.router, prefix="/api")

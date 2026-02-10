@@ -1,3 +1,13 @@
+export interface TickerInfo {
+  symbol: string;
+  name: string;
+}
+
+export interface TickersResponse {
+  tickers: TickerInfo[];
+  default: string;
+}
+
 export interface HealthResponse {
   status: string;
   active_ticker: string;

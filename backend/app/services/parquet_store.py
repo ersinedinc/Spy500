@@ -9,21 +9,30 @@ from app.config import DATA_DIR
 
 logger = logging.getLogger(__name__)
 
-METADATA_FILE = DATA_DIR / "metadata.json"
+
+def _ticker_dir(ticker: str) -> Path:
+    # Replace dots/slashes in ticker symbols for safe directory names
+    safe = ticker.replace(".", "_").replace("/", "_")
+    return DATA_DIR / safe
 
 
-def _ensure_dirs():
-    (DATA_DIR / "hourly").mkdir(parents=True, exist_ok=True)
-    (DATA_DIR / "daily").mkdir(parents=True, exist_ok=True)
+def _metadata_file(ticker: str) -> Path:
+    return _ticker_dir(ticker) / "metadata.json"
 
 
-def _parquet_path(timeframe: str) -> Path:
-    return DATA_DIR / timeframe / f"{timeframe}.parquet"
+def _ensure_dirs(ticker: str):
+    base = _ticker_dir(ticker)
+    (base / "hourly").mkdir(parents=True, exist_ok=True)
+    (base / "daily").mkdir(parents=True, exist_ok=True)
 
 
-def save(df: pd.DataFrame, timeframe: str) -> None:
-    _ensure_dirs()
-    path = _parquet_path(timeframe)
+def _parquet_path(ticker: str, timeframe: str) -> Path:
+    return _ticker_dir(ticker) / timeframe / f"{timeframe}.parquet"
+
+
+def save(df: pd.DataFrame, timeframe: str, ticker: str = "SPY") -> None:
+    _ensure_dirs(ticker)
+    path = _parquet_path(ticker, timeframe)
 
     if path.exists():
         existing = pd.read_parquet(path)
@@ -32,44 +41,50 @@ def save(df: pd.DataFrame, timeframe: str) -> None:
         combined = combined.sort_index()
         combined.to_parquet(path, engine="pyarrow")
         logger.info(
-            f"Merged {timeframe}: {len(existing)}+{len(df)} "
+            f"Merged {ticker}/{timeframe}: {len(existing)}+{len(df)} "
             f"→ {len(combined)} rows"
         )
     else:
         df.to_parquet(path, engine="pyarrow")
-        logger.info(f"Saved {timeframe}: {len(df)} rows")
+        logger.info(f"Saved {ticker}/{timeframe}: {len(df)} rows")
 
 
-def load(timeframe: str) -> pd.DataFrame:
-    path = _parquet_path(timeframe)
+def load(timeframe: str, ticker: str = "SPY") -> pd.DataFrame:
+    path = _parquet_path(ticker, timeframe)
     if not path.exists():
         return pd.DataFrame()
     df = pd.read_parquet(path)
     return df
 
 
-def save_metadata(active_ticker: str, used_fallback: bool, fallback_reason: str | None):
-    _ensure_dirs()
+def save_metadata(
+    active_ticker: str,
+    used_fallback: bool,
+    fallback_reason: str | None,
+    ticker: str = "SPY",
+):
+    _ensure_dirs(ticker)
     meta = {
         "last_refresh": datetime.now(timezone.utc).isoformat(),
         "active_ticker": active_ticker,
         "used_fallback": used_fallback,
         "fallback_reason": fallback_reason,
     }
-    with open(METADATA_FILE, "w") as f:
+    with open(_metadata_file(ticker), "w") as f:
         json.dump(meta, f, indent=2)
-    logger.info(f"Metadata saved: {active_ticker}, fallback={used_fallback}")
+    logger.info(f"Metadata saved for {ticker}: active={active_ticker}, fallback={used_fallback}")
 
 
-def load_metadata() -> dict | None:
-    if not METADATA_FILE.exists():
+def load_metadata(ticker: str = "SPY") -> dict | None:
+    mf = _metadata_file(ticker)
+    if not mf.exists():
         return None
-    with open(METADATA_FILE, "r") as f:
+    with open(mf, "r") as f:
         return json.load(f)
 
 
-def needs_refresh(max_age_hours: float = 1.0) -> bool:
-    meta = load_metadata()
+def needs_refresh(max_age_hours: float = 1.0, ticker: str = "SPY") -> bool:
+    meta = load_metadata(ticker)
     if meta is None:
         return True
     last = datetime.fromisoformat(meta["last_refresh"])

@@ -1,14 +1,15 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from app.schemas import HeatScoreResponse, ScoreComponentSchema
-from app.services.orchestrator import get_state
+from app.services.orchestrator import get_state, get_default_ticker
 
 router = APIRouter()
 
 
 @router.get("/heat-score", response_model=HeatScoreResponse)
-def get_heat_score():
-    s = get_state()
+def get_heat_score(ticker: str = Query(None)):
+    t = ticker or get_default_ticker()
+    s = get_state(t)
     if not s.ready or s.heat_score is None:
         raise HTTPException(status_code=503, detail="Data not ready")
 

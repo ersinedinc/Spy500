@@ -1,14 +1,15 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 from app.schemas import HealthResponse
-from app.services.orchestrator import get_state, refresh
+from app.services.orchestrator import get_state, refresh_ticker, get_default_ticker
 
 router = APIRouter()
 
 
 @router.get("/health", response_model=HealthResponse)
-def health():
-    s = get_state()
+def health(ticker: str = Query(None)):
+    t = ticker or get_default_ticker()
+    s = get_state(t)
     return HealthResponse(
         status="ok" if s.ready else "initializing",
         active_ticker=s.active_ticker,
@@ -22,9 +23,10 @@ def health():
 
 
 @router.post("/refresh", response_model=HealthResponse)
-def refresh_data():
-    refresh()
-    s = get_state()
+def refresh_data(ticker: str = Query(None)):
+    t = ticker or get_default_ticker()
+    refresh_ticker(t)
+    s = get_state(t)
     return HealthResponse(
         status="ok" if s.ready else "initializing",
         active_ticker=s.active_ticker,

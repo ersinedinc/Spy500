@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 
 from app.schemas import IndicatorsResponse, OHLCVPoint, IndicatorPoint
-from app.services.orchestrator import get_state
+from app.services.orchestrator import get_state, get_default_ticker
 
 router = APIRouter()
 
@@ -17,8 +17,12 @@ def _safe_float(val) -> float | None:
 
 
 @router.get("/indicators", response_model=IndicatorsResponse)
-def get_indicators(timeframe: str = Query("daily", pattern="^(daily|hourly)$")):
-    s = get_state()
+def get_indicators(
+    timeframe: str = Query("daily", pattern="^(daily|hourly)$"),
+    ticker: str = Query(None),
+):
+    t = ticker or get_default_ticker()
+    s = get_state(t)
     if not s.ready:
         raise HTTPException(status_code=503, detail="Data not ready")
 
@@ -26,11 +30,9 @@ def get_indicators(timeframe: str = Query("daily", pattern="^(daily|hourly)$")):
     if df.empty:
         raise HTTPException(status_code=404, detail=f"No {timeframe} data available")
 
-    ticker = s.active_ticker
-
     ohlcv = []
     for ts, row in df.iterrows():
-        t = ts.isoformat()
+        t_str = ts.isoformat()
         o = _safe_float(row.get("Open"))
         h = _safe_float(row.get("High"))
         l = _safe_float(row.get("Low"))
@@ -38,7 +40,7 @@ def get_indicators(timeframe: str = Query("daily", pattern="^(daily|hourly)$")):
         v = _safe_float(row.get("Volume"))
         if c is not None:
             ohlcv.append(OHLCVPoint(
-                time=t,
+                time=t_str,
                 open=o or c,
                 high=h or c,
                 low=l or c,
@@ -56,7 +58,7 @@ def get_indicators(timeframe: str = Query("daily", pattern="^(daily|hourly)$")):
         return points
 
     return IndicatorsResponse(
-        ticker=ticker,
+        ticker=s.active_ticker,
         timeframe=timeframe,
         ohlcv=ohlcv,
         sma20=_series("SMA_20"),

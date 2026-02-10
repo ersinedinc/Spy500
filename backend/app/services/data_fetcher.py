@@ -35,6 +35,22 @@ def _download(ticker: str, interval: str, period: str) -> pd.DataFrame:
     else:
         df.index = df.index.tz_convert("UTC")
     df.index.name = "Datetime"
+
+    # Some tickers (e.g. European ETFs) return intraday data even for "1d"
+    # interval. Resample to true daily bars to avoid duplicate date issues.
+    if interval == "1d" and not df.empty:
+        dates = df.index.normalize()
+        if dates.duplicated().any():
+            logger.info(f"Resampling {ticker} daily data: {len(df)} rows have duplicate dates")
+            df = df.resample("1D").agg({
+                "Open": "first",
+                "High": "max",
+                "Low": "min",
+                "Close": "last",
+                "Volume": "sum",
+            }).dropna(subset=["Close"])
+            logger.info(f"Resampled to {len(df)} daily rows")
+
     return df
 
 
@@ -77,4 +93,27 @@ def fetch_data() -> FetchResult:
         active_ticker=active_ticker,
         used_fallback=used_fallback,
         fallback_reason=fallback_reason,
+    )
+
+
+def fetch_ticker_data(ticker: str) -> FetchResult:
+    """Fetch data for a specific ticker directly (no primary/fallback logic)."""
+    cfg = get_config()
+    hourly_period = cfg["data"]["hourly_period"]
+    daily_period = cfg["data"]["daily_period"]
+
+    hourly = _download(ticker, "1h", hourly_period)
+    daily = _download(ticker, "1d", daily_period)
+
+    logger.info(
+        f"Fetch complete: ticker={ticker}, "
+        f"hourly={len(hourly)} rows, daily={len(daily)} rows"
+    )
+
+    return FetchResult(
+        hourly=hourly,
+        daily=daily,
+        active_ticker=ticker,
+        used_fallback=False,
+        fallback_reason=None,
     )

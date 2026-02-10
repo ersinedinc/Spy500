@@ -1,6 +1,16 @@
 from pydantic import BaseModel
 
 
+class TickerInfo(BaseModel):
+    symbol: str
+    name: str
+
+
+class TickersResponse(BaseModel):
+    tickers: list[TickerInfo]
+    default: str
+
+
 class HealthResponse(BaseModel):
     status: str
     active_ticker: str

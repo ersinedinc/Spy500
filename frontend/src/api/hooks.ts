@@ -7,62 +7,78 @@ import type {
   RegimeResponse,
   ActionPlanResponse,
   ReportResponse,
+  TickersResponse,
 } from './types';
 
-export function useRefresh() {
+export function useTickers() {
+  return useQuery<TickersResponse>({
+    queryKey: ['tickers'],
+    queryFn: () => apiFetch<TickersResponse>('/tickers'),
+    staleTime: Infinity,
+  });
+}
+
+export function useRefresh(ticker?: string) {
   const queryClient = useQueryClient();
+  const param = ticker ? `?ticker=${encodeURIComponent(ticker)}` : '';
   return useMutation({
-    mutationFn: () => apiPost<HealthResponse>('/refresh'),
+    mutationFn: () => apiPost<HealthResponse>(`/refresh${param}`),
     onSuccess: () => {
       queryClient.invalidateQueries();
     },
   });
 }
 
-export function useHealth() {
+export function useHealth(ticker?: string) {
+  const param = ticker ? `?ticker=${encodeURIComponent(ticker)}` : '';
   return useQuery<HealthResponse>({
-    queryKey: ['health'],
-    queryFn: () => apiFetch<HealthResponse>('/health'),
+    queryKey: ['health', ticker],
+    queryFn: () => apiFetch<HealthResponse>(`/health${param}`),
     refetchInterval: 5 * 60 * 1000,
   });
 }
 
-export function useHeatScore() {
+export function useHeatScore(ticker?: string) {
+  const param = ticker ? `?ticker=${encodeURIComponent(ticker)}` : '';
   return useQuery<HeatScoreResponse>({
-    queryKey: ['heat-score'],
-    queryFn: () => apiFetch<HeatScoreResponse>('/heat-score'),
+    queryKey: ['heat-score', ticker],
+    queryFn: () => apiFetch<HeatScoreResponse>(`/heat-score${param}`),
     refetchInterval: 5 * 60 * 1000,
   });
 }
 
-export function useIndicators(timeframe: 'daily' | 'hourly' = 'daily') {
+export function useIndicators(timeframe: 'daily' | 'hourly' = 'daily', ticker?: string) {
+  const tickerParam = ticker ? `&ticker=${encodeURIComponent(ticker)}` : '';
   return useQuery<IndicatorsResponse>({
-    queryKey: ['indicators', timeframe],
-    queryFn: () => apiFetch<IndicatorsResponse>(`/indicators?timeframe=${timeframe}`),
+    queryKey: ['indicators', timeframe, ticker],
+    queryFn: () => apiFetch<IndicatorsResponse>(`/indicators?timeframe=${timeframe}${tickerParam}`),
     refetchInterval: 5 * 60 * 1000,
   });
 }
 
-export function useRegime() {
+export function useRegime(ticker?: string) {
+  const param = ticker ? `?ticker=${encodeURIComponent(ticker)}` : '';
   return useQuery<RegimeResponse>({
-    queryKey: ['regime'],
-    queryFn: () => apiFetch<RegimeResponse>('/regime'),
+    queryKey: ['regime', ticker],
+    queryFn: () => apiFetch<RegimeResponse>(`/regime${param}`),
     refetchInterval: 5 * 60 * 1000,
   });
 }
 
-export function useActionPlan() {
+export function useActionPlan(ticker?: string) {
+  const param = ticker ? `?ticker=${encodeURIComponent(ticker)}` : '';
   return useQuery<ActionPlanResponse>({
-    queryKey: ['action-plan'],
-    queryFn: () => apiFetch<ActionPlanResponse>('/action-plan'),
+    queryKey: ['action-plan', ticker],
+    queryFn: () => apiFetch<ActionPlanResponse>(`/action-plan${param}`),
     refetchInterval: 5 * 60 * 1000,
   });
 }
 
-export function useReport() {
+export function useReport(ticker?: string) {
+  const param = ticker ? `?ticker=${encodeURIComponent(ticker)}` : '';
   return useQuery<ReportResponse>({
-    queryKey: ['report'],
-    queryFn: () => apiFetch<ReportResponse>('/report'),
+    queryKey: ['report', ticker],
+    queryFn: () => apiFetch<ReportResponse>(`/report${param}`),
     refetchInterval: 5 * 60 * 1000,
   });
 }

@@ -1,11 +1,12 @@
 import logging
+import threading
 from dataclasses import dataclass, field
 from typing import Optional
 
 import pandas as pd
 
 from app.config import get_config
-from app.services.data_fetcher import fetch_data, FetchResult
+from app.services.data_fetcher import fetch_data, fetch_ticker_data, FetchResult
 from app.services.data_validator import validate
 from app.services import parquet_store
 from app.services.indicator_engine import compute_indicators
@@ -32,51 +33,63 @@ class PipelineState:
     ready: bool = False
 
 
-# Global state — populated on startup and refresh
-state = PipelineState()
+# Per-ticker states — populated on startup and on demand
+_states: dict[str, PipelineState] = {}
+
+# Default ticker symbol (set on startup)
+_default_ticker: str = "SPY"
+
+# Per-ticker locks to prevent parallel fetches for the same ticker
+_locks: dict[str, threading.Lock] = {}
+_locks_lock = threading.Lock()
 
 
-def refresh() -> PipelineState:
-    global state
-    logger.info("Starting pipeline refresh...")
+def _get_ticker_lock(ticker: str) -> threading.Lock:
+    with _locks_lock:
+        if ticker not in _locks:
+            _locks[ticker] = threading.Lock()
+        return _locks[ticker]
 
-    # 1. Fetch
-    result: FetchResult = fetch_data()
 
-    # 2. Validate
+def get_default_ticker() -> str:
+    return _default_ticker
+
+
+def _run_pipeline(result: FetchResult, ticker: str) -> PipelineState:
+    """Run the full analysis pipeline on fetched data."""
+    # Validate
     hourly = validate(result.hourly, label="hourly")
     daily = validate(result.daily, label="daily")
 
-    # 3. Store
-    parquet_store.save(hourly, "hourly")
-    parquet_store.save(daily, "daily")
+    # Store
+    parquet_store.save(hourly, "hourly", ticker=ticker)
+    parquet_store.save(daily, "daily", ticker=ticker)
     parquet_store.save_metadata(
-        result.active_ticker, result.used_fallback, result.fallback_reason
+        result.active_ticker, result.used_fallback, result.fallback_reason,
+        ticker=ticker,
     )
 
-    # 4. Compute indicators (on daily — more robust for SMA200 etc.)
+    # Compute indicators
     daily_ind = compute_indicators(daily)
     hourly_ind = compute_indicators(hourly)
 
-    # 5. Get latest row from daily data for scoring
     if daily_ind.empty:
-        logger.error("No daily data after indicator computation")
-        state.ready = False
-        return state
+        logger.error(f"No daily data after indicator computation for {ticker}")
+        return PipelineState(active_ticker=ticker, ready=False)
 
     latest = daily_ind.iloc[-1].to_dict()
     prev_row = daily_ind.iloc[-2].to_dict() if len(daily_ind) > 1 else None
 
-    # 6. Regime detection
+    # Regime detection
     regime = detect_regime(latest, prev_row)
 
-    # 7. Heat score
+    # Heat score
     heat = compute_heat_score(latest)
 
-    # 8. DCA
+    # DCA
     dca = compute_dca(heat.score, heat.label, regime.regime.value)
 
-    # 9. Report
+    # Report
     report = generate_report(
         heat=heat,
         regime=regime,
@@ -87,9 +100,8 @@ def refresh() -> PipelineState:
         latest=latest,
     )
 
-    # Update state
-    meta = parquet_store.load_metadata()
-    state = PipelineState(
+    meta = parquet_store.load_metadata(ticker=ticker)
+    return PipelineState(
         active_ticker=result.active_ticker,
         used_fallback=result.used_fallback,
         fallback_reason=result.fallback_reason,
@@ -103,32 +115,79 @@ def refresh() -> PipelineState:
         ready=True,
     )
 
+
+def refresh_ticker(ticker: str) -> PipelineState:
+    """Refresh data for a specific ticker."""
+    logger.info(f"Starting pipeline refresh for {ticker}...")
+    result: FetchResult = fetch_ticker_data(ticker)
+    state = _run_pipeline(result, ticker)
+    _states[ticker] = state
+    logger.info(f"Pipeline refresh complete for {ticker}")
+    return state
+
+
+def refresh() -> PipelineState:
+    """Refresh the default ticker using the original primary/fallback logic."""
+    global _states
+    logger.info("Starting pipeline refresh (default)...")
+    result: FetchResult = fetch_data()
+    ticker = result.active_ticker
+    state = _run_pipeline(result, ticker)
+    _states[ticker] = state
     logger.info("Pipeline refresh complete")
     return state
 
 
-def initialize() -> PipelineState:
+def initialize_ticker(ticker: str) -> PipelineState:
+    """Initialize a specific ticker — load from cache or fetch."""
     cfg = get_config()
     max_age = cfg["data"]["max_age_hours"]
 
-    if parquet_store.needs_refresh(max_age):
+    if parquet_store.needs_refresh(max_age, ticker=ticker):
+        logger.info(f"Data for {ticker} is stale or missing, refreshing...")
+        return refresh_ticker(ticker)
+    else:
+        logger.info(f"Data for {ticker} is fresh, loading from cache...")
+        return _load_from_cache(ticker)
+
+
+def initialize() -> PipelineState:
+    """Initialize on startup — loads the default ticker from config."""
+    global _default_ticker
+    cfg = get_config()
+
+    # Set default ticker from etfs config if available
+    etfs = cfg.get("etfs", [])
+    if etfs:
+        _default_ticker = etfs[0]["symbol"]
+    else:
+        _default_ticker = cfg["tickers"]["fallback"]
+
+    max_age = cfg["data"]["max_age_hours"]
+
+    if parquet_store.needs_refresh(max_age, ticker=_default_ticker):
         logger.info("Data is stale or missing, refreshing...")
-        return refresh()
+        # Use the original primary/fallback logic for first startup
+        result: FetchResult = fetch_data()
+        state = _run_pipeline(result, result.active_ticker)
+        _states[result.active_ticker] = state
+        # If fallback was used, also store under the default ticker key
+        if result.active_ticker != _default_ticker:
+            _states[_default_ticker] = state
+        return state
     else:
         logger.info("Data is fresh, loading from parquet...")
-        return _load_from_cache()
+        return _load_from_cache(_default_ticker)
 
 
-def _load_from_cache() -> PipelineState:
-    global state
-
-    hourly = parquet_store.load("hourly")
-    daily = parquet_store.load("daily")
-    meta = parquet_store.load_metadata()
+def _load_from_cache(ticker: str) -> PipelineState:
+    hourly = parquet_store.load("hourly", ticker=ticker)
+    daily = parquet_store.load("daily", ticker=ticker)
+    meta = parquet_store.load_metadata(ticker=ticker)
 
     if daily.empty or meta is None:
-        logger.warning("Cache empty, forcing refresh")
-        return refresh()
+        logger.warning(f"Cache empty for {ticker}, forcing refresh")
+        return refresh_ticker(ticker)
 
     daily_ind = compute_indicators(daily)
     hourly_ind = compute_indicators(hourly)
@@ -163,9 +222,21 @@ def _load_from_cache() -> PipelineState:
         ready=True,
     )
 
-    logger.info("Loaded from cache successfully")
+    _states[ticker] = state
+    logger.info(f"Loaded {ticker} from cache successfully")
     return state
 
 
-def get_state() -> PipelineState:
-    return state
+def get_state(ticker: str | None = None) -> PipelineState:
+    """Get state for a ticker. Lazily initializes if not yet loaded."""
+    if ticker is None:
+        ticker = _default_ticker
+
+    if ticker not in _states:
+        lock = _get_ticker_lock(ticker)
+        with lock:
+            # Double-check after acquiring lock
+            if ticker not in _states:
+                initialize_ticker(ticker)
+
+    return _states.get(ticker, PipelineState())

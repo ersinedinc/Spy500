@@ -1,4 +1,4 @@
-import { useHealth, useHeatScore, useIndicators, useRegime, useActionPlan, useReport } from '../api/hooks';
+import { useHeatScore, useIndicators, useRegime, useActionPlan, useReport } from '../api/hooks';
 import DashboardGrid from '../components/layout/DashboardGrid';
 import PriceChart from '../components/charts/PriceChart';
 import RSIChart from '../components/charts/RSIChart';
@@ -11,12 +11,16 @@ import ScoreBreakdown from '../components/widgets/ScoreBreakdown';
 import HistoryTable from '../components/widgets/HistoryTable';
 import ReportViewer from '../components/widgets/ReportViewer';
 
-export default function Dashboard() {
-  const heatScore = useHeatScore();
-  const indicators = useIndicators('daily');
-  const regime = useRegime();
-  const actionPlan = useActionPlan();
-  const report = useReport();
+interface DashboardProps {
+  ticker: string;
+}
+
+export default function Dashboard({ ticker }: DashboardProps) {
+  const heatScore = useHeatScore(ticker);
+  const indicators = useIndicators('daily', ticker);
+  const regime = useRegime(ticker);
+  const actionPlan = useActionPlan(ticker);
+  const report = useReport(ticker);
 
   const isLoading = heatScore.isLoading || indicators.isLoading;
 

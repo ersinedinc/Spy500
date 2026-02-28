@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { LineSeries, type IChartApi } from 'lightweight-charts';
 import ChartContainer from './ChartContainer';
+import { useTranslation } from '../../i18n';
 import type { IndicatorPoint } from '../../api/types';
 
 interface VolatilityChartProps {
@@ -12,6 +13,8 @@ function parseTime(iso: string): string {
 }
 
 export default function VolatilityChart({ data }: VolatilityChartProps) {
+  const { t } = useTranslation();
+
   const setupChart = useCallback((chart: IChartApi) => {
     const series = chart.addSeries(LineSeries, {
       color: '#8b5cf6',
@@ -50,7 +53,7 @@ export default function VolatilityChart({ data }: VolatilityChartProps) {
 
   return (
     <ChartContainer
-      title="Annualized Volatility (%)"
+      title={t('chart.volatility')}
       height={200}
     >
       {setupChart}

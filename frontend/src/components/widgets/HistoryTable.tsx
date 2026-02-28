@@ -1,3 +1,4 @@
+import { useTranslation } from '../../i18n';
 import type { IndicatorsResponse } from '../../api/types';
 
 interface HistoryTableProps {
@@ -6,6 +7,7 @@ interface HistoryTableProps {
 }
 
 export default function HistoryTable({ data, rows = 10 }: HistoryTableProps) {
+  const { t } = useTranslation();
   const ohlcv = data.ohlcv.slice(-rows).reverse();
 
   // Build lookup maps for indicators
@@ -25,12 +27,12 @@ export default function HistoryTable({ data, rows = 10 }: HistoryTableProps) {
 
   return (
     <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 overflow-x-auto">
-      <div className="text-sm font-medium text-gray-300 mb-3">Recent Data</div>
+      <div className="text-sm font-medium text-gray-300 mb-3">{t('history.title')}</div>
       <table className="w-full text-xs">
         <thead>
           <tr className="text-gray-500 border-b border-gray-800">
-            <th className="text-left py-1.5 pr-3">Date</th>
-            <th className="text-right py-1.5 px-2">Close</th>
+            <th className="text-left py-1.5 pr-3">{t('history.date')}</th>
+            <th className="text-right py-1.5 px-2">{t('history.close')}</th>
             <th className="text-right py-1.5 px-2">RSI</th>
             <th className="text-right py-1.5 px-2">SMA50</th>
             <th className="text-right py-1.5 px-2">Vol%</th>

@@ -1,3 +1,4 @@
+import { useTranslation } from '../../i18n';
 import type { ScoreComponent } from '../../api/types';
 
 interface ScoreBreakdownProps {
@@ -14,9 +15,11 @@ function barColor(normalized: number): string {
 }
 
 export default function ScoreBreakdown({ components, totalScore }: ScoreBreakdownProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="bg-gray-900 rounded-lg border border-gray-800 p-4">
-      <div className="text-sm font-medium text-gray-300 mb-3">Score Breakdown</div>
+      <div className="text-sm font-medium text-gray-300 mb-3">{t('breakdown.title')}</div>
 
       <div className="space-y-2">
         {components.map((c) => (
@@ -38,7 +41,7 @@ export default function ScoreBreakdown({ components, totalScore }: ScoreBreakdow
       </div>
 
       <div className="mt-3 pt-2 border-t border-gray-800 flex justify-between text-sm font-semibold">
-        <span className="text-gray-300">Total Score</span>
+        <span className="text-gray-300">{t('breakdown.total')}</span>
         <span className="text-gray-200">{totalScore.toFixed(1)}</span>
       </div>
     </div>

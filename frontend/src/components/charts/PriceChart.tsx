@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { CandlestickSeries, LineSeries, type IChartApi } from 'lightweight-charts';
 import ChartContainer from './ChartContainer';
+import { useTranslation } from '../../i18n';
 import type { IndicatorsResponse } from '../../api/types';
 
 interface PriceChartProps {
@@ -12,6 +13,8 @@ function parseTime(iso: string): string {
 }
 
 export default function PriceChart({ data }: PriceChartProps) {
+  const { t } = useTranslation();
+
   const setupChart = useCallback((chart: IChartApi) => {
     // Candlestick series
     const candleSeries = chart.addSeries(CandlestickSeries, {
@@ -59,5 +62,6 @@ export default function PriceChart({ data }: PriceChartProps) {
     chart.timeScale().fitContent();
   }, [data]);
 
-  return <ChartContainer title={`${data.ticker} Price (${data.timeframe})`} height={400}>{setupChart}</ChartContainer>;
+  const tf = data.timeframe === 'daily' ? t('chart.daily') : t('chart.hourly');
+  return <ChartContainer title={`${data.ticker} ${t('chart.price')} (${tf})`} height={400}>{setupChart}</ChartContainer>;
 }

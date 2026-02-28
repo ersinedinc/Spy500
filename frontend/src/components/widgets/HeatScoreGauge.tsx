@@ -1,3 +1,4 @@
+import { useTranslation } from '../../i18n';
 import type { HeatScoreResponse } from '../../api/types';
 
 interface HeatScoreGaugeProps {
@@ -13,6 +14,7 @@ function scoreToColor(score: number): string {
 }
 
 export default function HeatScoreGauge({ data }: HeatScoreGaugeProps) {
+  const { t } = useTranslation();
   const score = data.score;
   const color = scoreToColor(score);
   const angle = (score / 100) * 180;
@@ -37,7 +39,7 @@ export default function HeatScoreGauge({ data }: HeatScoreGaugeProps) {
 
   return (
     <div className="bg-gray-900 rounded-lg border border-gray-800 p-4">
-      <div className="text-sm font-medium text-gray-300 mb-2">Market Heat Score</div>
+      <div className="text-sm font-medium text-gray-300 mb-2">{t('heat.title')}</div>
       <div className="flex flex-col items-center">
         <svg width="240" height="140" viewBox="0 0 240 140">
           {/* Background arc */}
@@ -66,12 +68,12 @@ export default function HeatScoreGauge({ data }: HeatScoreGaugeProps) {
             {data.label}
           </text>
           {/* Labels */}
-          <text x="20" y="130" fill="#22c55e" fontSize="11">Fear</text>
-          <text x="200" y="130" fill="#ef4444" fontSize="11">Hot</text>
+          <text x="20" y="130" fill="#22c55e" fontSize="11">{t('heat.fear')}</text>
+          <text x="200" y="130" fill="#ef4444" fontSize="11">{t('heat.hot')}</text>
         </svg>
       </div>
       <div className="text-center text-xs text-gray-500 mt-1">
-        0 = Opportunity / 100 = Risk
+        {t('heat.scale')}
       </div>
     </div>
   );

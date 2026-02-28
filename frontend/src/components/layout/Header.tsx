@@ -1,5 +1,6 @@
 import StatusIndicator from '../widgets/StatusIndicator';
 import { useRefresh } from '../../api/hooks';
+import { useTranslation } from '../../i18n';
 import type { HealthResponse, TickerInfo } from '../../api/types';
 
 interface HeaderProps {
@@ -13,13 +14,14 @@ interface HeaderProps {
 
 export default function Header({ health, isLoading, tickers, selectedTicker, selectedName, onTickerChange }: HeaderProps) {
   const refresh = useRefresh(selectedTicker);
+  const { t, lang, setLang } = useTranslation();
 
   return (
     <header className="border-b border-gray-800 bg-gray-900/80 backdrop-blur-sm sticky top-0 z-10">
       <div className="max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-lg font-bold text-gray-100">{selectedName} Dashboard</h1>
-          <span className="text-xs text-gray-600 hidden sm:inline">Decision Support for Long-Term DCA</span>
+          <h1 className="text-lg font-bold text-gray-100">{selectedName} {t('header.dashboard')}</h1>
+          <span className="text-xs text-gray-600 hidden sm:inline">{t('header.subtitle')}</span>
         </div>
         <div className="flex items-center gap-3">
           {tickers.length > 0 && (
@@ -28,20 +30,26 @@ export default function Header({ health, isLoading, tickers, selectedTicker, sel
               onChange={(e) => onTickerChange(e.target.value)}
               className="px-2 py-1.5 text-xs font-medium rounded border border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
-              {tickers.map((t) => (
-                <option key={t.symbol} value={t.symbol}>
-                  {t.name}
+              {tickers.map((tk) => (
+                <option key={tk.symbol} value={tk.symbol}>
+                  {tk.name}
                 </option>
               ))}
             </select>
           )}
+          <button
+            onClick={() => setLang(lang === 'en' ? 'tr' : 'en')}
+            className="px-2 py-1.5 text-xs font-medium rounded border border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors"
+          >
+            {lang === 'en' ? 'TR' : 'EN'}
+          </button>
           <StatusIndicator data={health} isLoading={isLoading} />
           <button
             onClick={() => refresh.mutate()}
             disabled={refresh.isPending}
             className="px-3 py-1.5 text-xs font-medium rounded border border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {refresh.isPending ? 'Refreshing...' : 'Refresh'}
+            {refresh.isPending ? t('header.refreshing') : t('header.refresh')}
           </button>
         </div>
       </div>

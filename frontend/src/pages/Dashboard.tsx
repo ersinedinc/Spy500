@@ -1,4 +1,5 @@
 import { useHeatScore, useIndicators, useRegime, useActionPlan, useReport } from '../api/hooks';
+import { useTranslation } from '../i18n';
 import DashboardGrid from '../components/layout/DashboardGrid';
 import PriceChart from '../components/charts/PriceChart';
 import RSIChart from '../components/charts/RSIChart';
@@ -16,6 +17,7 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ ticker }: DashboardProps) {
+  const { t } = useTranslation();
   const heatScore = useHeatScore(ticker);
   const indicators = useIndicators('daily', ticker);
   const regime = useRegime(ticker);
@@ -27,7 +29,7 @@ export default function Dashboard({ ticker }: DashboardProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500 text-sm">Loading dashboard data...</div>
+        <div className="text-gray-500 text-sm">{t('dashboard.loading')}</div>
       </div>
     );
   }
@@ -37,7 +39,7 @@ export default function Dashboard({ ticker }: DashboardProps) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-red-400 text-sm">
-          Failed to load data. Is the backend running on port 8000?
+          {t('dashboard.error')}
         </div>
       </div>
     );

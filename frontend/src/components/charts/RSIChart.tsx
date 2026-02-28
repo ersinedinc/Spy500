@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { LineSeries, type IChartApi } from 'lightweight-charts';
 import ChartContainer from './ChartContainer';
+import { useTranslation } from '../../i18n';
 import type { IndicatorPoint } from '../../api/types';
 
 interface RSIChartProps {
@@ -12,6 +13,8 @@ function parseTime(iso: string): string {
 }
 
 export default function RSIChart({ data }: RSIChartProps) {
+  const { t } = useTranslation();
+
   const setupChart = useCallback((chart: IChartApi) => {
     const series = chart.addSeries(LineSeries, {
       color: '#f59e0b',
@@ -56,7 +59,7 @@ export default function RSIChart({ data }: RSIChartProps) {
 
   return (
     <ChartContainer
-      title="RSI (14)"
+      title={t('chart.rsi')}
       height={200}
       options={{ rightPriceScale: { scaleMargins: { top: 0.1, bottom: 0.1 } } }}
     >

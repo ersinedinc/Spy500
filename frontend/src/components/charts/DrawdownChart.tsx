@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { AreaSeries, type IChartApi } from 'lightweight-charts';
 import ChartContainer from './ChartContainer';
+import { useTranslation } from '../../i18n';
 import type { IndicatorPoint } from '../../api/types';
 
 interface DrawdownChartProps {
@@ -12,6 +13,8 @@ function parseTime(iso: string): string {
 }
 
 export default function DrawdownChart({ data }: DrawdownChartProps) {
+  const { t } = useTranslation();
+
   const setupChart = useCallback((chart: IChartApi) => {
     const series = chart.addSeries(AreaSeries, {
       lineColor: '#ef4444',
@@ -36,7 +39,7 @@ export default function DrawdownChart({ data }: DrawdownChartProps) {
 
   return (
     <ChartContainer
-      title="Drawdown (%)"
+      title={t('chart.drawdown')}
       height={200}
     >
       {setupChart}

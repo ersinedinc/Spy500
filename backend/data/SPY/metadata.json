@@ -1,6 +1,0 @@
-{
-  "last_refresh": "2026-02-24T19:26:01.554911+00:00",
-  "active_ticker": "SPY",
-  "used_fallback": true,
-  "fallback_reason": "VUAA.AS returned only 0 hourly rows (minimum 100). Falling back to SPY."
-}

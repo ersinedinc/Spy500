@@ -12,9 +12,8 @@ venv/
 env/
 
 # Data files
-backend/data/hourly/*.parquet
-backend/data/daily/*.parquet
-backend/data/metadata.json
+backend/data/**/*.parquet
+backend/data/**/metadata.json
 
 # IDE
 .vscode/
